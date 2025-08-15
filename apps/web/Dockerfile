@@ -1,29 +1,16 @@
-FROM oven/bun:1 AS build
+FROM oven/bun:1 AS base
 
-WORKDIR /app
+WORKDIR /code
 
 ENV NODE_ENV=production
+
+COPY package.json bun.lock ./
+COPY apps/web/package.json ./apps/web/package.json
+
+RUN bun install
 
 COPY . .
 
-RUN bun install --frozen-lockfile
-
-WORKDIR /app/apps/web
 RUN bun run build
 
-# ---
-
-FROM oven/bun:1 AS runtime
-WORKDIR /app/apps/web
-ENV NODE_ENV=production
-ENV PORT=3000
-
-COPY --from=build /app/apps/web/dist ./dist
-COPY --from=build /app/apps/web/package.json ./package.json
-COPY --from=build /app/package.json /app/bun.lock /app/
-
-RUN bun install --frozen-lockfile --production
-
-EXPOSE 3000
-
-CMD ["bun", "run", "serve"]
+CMD ["bun", "start"]
