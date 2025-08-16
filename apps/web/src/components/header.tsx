@@ -1,5 +1,5 @@
-import { Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
+import { Monitor, Moon, Sun } from 'lucide-react';
 
 export default function Header() {
   const [theme, setTheme] = useState<'system' | 'light' | 'dark'>('system');
@@ -24,31 +24,58 @@ export default function Header() {
     media.addEventListener('change', handler);
     return () => media.removeEventListener('change', handler);
   }, [theme]);
-  const links = [{ to: '/', label: 'Home' }];
-
   return (
     <div>
-      <div className="flex flex-row items-center justify-between px-2 py-1">
-        <nav className="flex gap-4 text-lg">
-          {links.map(({ to, label }) => {
-            return (
-              <Link key={to} to={to}>
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="flex items-center gap-2">
-          <select
+      <div className="flex flex-row items-center justify-end px-2 py-1">
+        <div className="flex items-center">
+          <div
             aria-label="Theme"
-            className="rounded-md border bg-background px-2 py-1 text-sm"
-            onChange={(e) => setTheme(e.target.value as typeof theme)}
-            value={theme}
+            className="inline-flex items-center rounded-md border bg-background p-1"
+            role="radiogroup"
           >
-            <option value="system">System</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
+            <button
+              aria-checked={theme === 'system'}
+              aria-label="System theme"
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-sm transition-colors ${
+                theme === 'system'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-muted'
+              }`}
+              onClick={() => setTheme('system')}
+              role="radio"
+              type="button"
+            >
+              <Monitor className="h-4 w-4" />
+            </button>
+            <button
+              aria-checked={theme === 'light'}
+              aria-label="Light theme"
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-sm transition-colors ${
+                theme === 'light'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-muted'
+              }`}
+              onClick={() => setTheme('light')}
+              role="radio"
+              type="button"
+            >
+              <Sun className="h-4 w-4" />
+            </button>
+            <button
+              aria-checked={theme === 'dark'}
+              aria-label="Dark theme"
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-sm transition-colors ${
+                theme === 'dark'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-muted'
+              }`}
+              onClick={() => setTheme('dark')}
+              role="radio"
+              type="button"
+            >
+              <Moon className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
       <hr />
