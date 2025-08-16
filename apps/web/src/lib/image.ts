@@ -7,27 +7,22 @@ export type DecodedImage = {
 const MAX_DIMENSION = 4096; // cap very large images for safety/perf
 
 export async function decodeFileToBitmap(file: File): Promise<DecodedImage> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await fetch(url).then((r) => r.blob());
-    const bitmap = await createImageBitmap(img);
-    const { width, height } = constrainDimensions(bitmap.width, bitmap.height);
-    if (width !== bitmap.width || height !== bitmap.height) {
-      // downscale to safe size via OffscreenCanvas if needed
-      const canvas = new OffscreenCanvas(width, height);
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        return { bitmap, width: bitmap.width, height: bitmap.height };
-      }
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(bitmap, 0, 0, width, height);
-      const scaled = canvas.transferToImageBitmap();
-      return { bitmap: scaled, width, height };
+  const bitmap = await createImageBitmap(file);
+
+  const { width, height } = constrainDimensions(bitmap.width, bitmap.height);
+  if (width !== bitmap.width || height !== bitmap.height) {
+    // downscale to safe size via OffscreenCanvas if needed
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return { bitmap, width: bitmap.width, height: bitmap.height };
     }
-    return { bitmap, width, height };
-  } finally {
-    URL.revokeObjectURL(url);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    const scaled = canvas.transferToImageBitmap();
+    return { bitmap: scaled, width, height };
   }
+  return { bitmap, width, height };
 }
 
 export function constrainDimensions(width: number, height: number) {

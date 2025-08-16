@@ -1,9 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PixelControls } from '@/components/pixel-controls';
 import { PixelViewer } from '@/components/pixel-viewer';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Slider } from '@/components/ui/slider';
 import { decodeFileToBitmap } from '@/lib/image';
 import { PALETTE_ENTRIES } from '@/lib/palette';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Upload, Download, ZoomIn, ZoomOut, ImageIcon, Palette } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type {
   PixelateBlobMessage,
   PixelateIncomingMessage,
@@ -22,15 +27,10 @@ const HEX_SIX_LEN = 6;
 const HEX_BYTE_SLICE_START = 0;
 const HEX_BYTE_SLICE_MIDDLE = 2;
 const HEX_BYTE_SLICE_END = 4;
-const TRANSPARENT_RGBA: [number, number, number, number] = [0, 0, 0, 0];
 
 function hexToRgbaComponents(
   hex: string
 ): [number, number, number, number] | null {
-  const lower = hex.toLowerCase();
-  if (lower === 'transparent') {
-    return TRANSPARENT_RGBA;
-  }
   let h = hex.trim();
   if (h.startsWith('#')) {
     h = h.slice(1);
@@ -56,6 +56,17 @@ function hexToRgbaComponents(
   return null;
 }
 
+function toReadableName(key: string): string {
+  // Split into words and convert to Title Case
+  const spaced = key
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[-_]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+  return spaced.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function HomeComponent() {
   const workerRef = useRef<Worker | null>(null);
   const [jobId, setJobId] = useState(0);
@@ -75,11 +86,12 @@ function HomeComponent() {
     };
   } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showGrid, setShowGrid] = useState(true);
+  const showGrid = true;
   const [colorizeEnabled, setColorizeEnabled] = useState(true);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() =>
     PALETTE_ENTRIES.map((e) => String(e.key))
   );
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     // Using import.meta.url provides the absolute URL of the current module,
@@ -193,30 +205,57 @@ function HomeComponent() {
     startProcess(blockSize, decoded.bitmap, true);
   }
 
+  const handleFileInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const f = e.target.files?.[0];
+      if (!f || !f.type.startsWith('image/')) {
+        return;
+      }
+      void handleFile(f);
+    },
+    []
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const files = e.dataTransfer.files;
+    if (files.length === 0) {
+      return;
+    }
+    const file = files[0];
+    if (!file.type.startsWith('image/')) {
+      return;
+    }
+    void handleFile(file);
+  }, []);
+
   function handleBlockSizeChange(v: number) {
     setBlockSize(v);
-    if (!bitmap) {
-      return;
-    }
-    startProcess(v, bitmap, false);
   }
 
-  function zoomFit(containerW: number, containerH: number) {
-    const w = result?.bitmap.width ?? bitmap?.width ?? 0;
-    const h = result?.bitmap.height ?? bitmap?.height ?? 0;
-    if (w === 0 || h === 0) {
-      return;
-    }
-    const MIN_ZOOM = 0.25;
-    const MAX_ZOOM = 8;
-    const scaleByWidth = containerW / w;
-    const scaleByHeight = containerH / h;
-    const bestScale = Math.min(scaleByWidth, scaleByHeight);
-    const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, bestScale));
-    const precision = 3;
-    const scale = Number(clamped.toFixed(precision));
-    setZoom(scale);
-  }
+  const zoomFit = useCallback(
+    (containerW: number, containerH: number) => {
+      const w = result?.bitmap.width ?? bitmap?.width ?? 0;
+      const h = result?.bitmap.height ?? bitmap?.height ?? 0;
+      if (w === 0 || h === 0) {
+        return;
+      }
+      const MIN_ZOOM = 0.25;
+      const MAX_ZOOM = 8;
+      const scaleByWidth = containerW / w;
+      const scaleByHeight = containerH / h;
+      const bestScale = Math.min(scaleByWidth, scaleByHeight);
+      const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, bestScale));
+      const precision = 3;
+      const scale = Number(clamped.toFixed(precision));
+      setZoom(scale);
+    },
+    [bitmap, result]
+  );
 
   function onDownload() {
     if (!result) {
@@ -225,75 +264,309 @@ function HomeComponent() {
     workerRef.current?.postMessage({ type: 'generateBlob', jobId });
   }
 
-  // Re-run when palette settings change
+  // Re-run processing when inputs change (block size, palette) and a bitmap is loaded
   useEffect(() => {
-    if (bitmap && result) {
+    if (bitmap) {
       startProcess(blockSize, bitmap, false);
     }
-  }, [bitmap, result, blockSize, startProcess]);
+  }, [bitmap, blockSize, selectedKeys, startProcess]);
 
   return (
-    <div className="container mx-auto h-full px-4 py-4">
-      <div className="grid h-full gap-4 md:grid-cols-[360px_1fr]">
-        <section className="rounded-lg border p-4">
-          <PixelControls
-            blockSize={blockSize}
-            colorizeEnabled={colorizeEnabled}
-            disabled={isProcessing && !result}
-            gridEnabled={showGrid}
-            meta={result?.meta}
-            onBlockSizeChange={handleBlockSizeChange}
-            onDownload={onDownload}
-            onFileSelected={handleFile}
-            onSelectAll={(premium) => {
-              if (premium === 'all') {
-                setSelectedKeys(PALETTE_ENTRIES.map((e) => String(e.key)));
-                return;
-              }
-              setSelectedKeys(
-                PALETTE_ENTRIES.filter((e) => e.isPremium === premium).map(
-                  (e) => String(e.key)
-                )
-              );
-            }}
-            onToggleColorize={setColorizeEnabled}
-            onToggleGrid={setShowGrid}
-            onToggleKey={(k) => {
-              setSelectedKeys((prev) =>
-                prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]
-              );
-            }}
-            onZoom100={() => {
-              setZoom(1);
-            }}
-            onZoomChange={setZoom}
-            onZoomFit={() => {
-              const el = document.getElementById('viewer-container');
-              if (!el) {
-                return;
-              }
-              zoomFit(el.clientWidth, el.clientHeight);
-            }}
-            paletteEntries={PALETTE_ENTRIES}
-            selectedKeys={selectedKeys}
-            zoom={zoom}
-          />
-        </section>
-        <section
-          className="overflow-hidden rounded-lg border p-0"
-          id="viewer-container"
-        >
-          <div className="h-[min(70vh,70svh)] md:h-full">
-            <PixelViewer
-              bitmap={result?.bitmap ?? null}
-              blockSize={blockSize}
-              onRequestFit={zoomFit}
-              onZoomChange={setZoom}
-              showGrid={showGrid}
-              zoom={zoom}
-            />
+    <div className="container mx-auto h-full px-4 py-6">
+      <div className="space-y-6">
+        <div className="text-center space-y-1">
+          <h1 className="text-3xl font-bold">Pixel Art Converter</h1>
+          <p className="text-muted-foreground text-sm">
+            Transform your images into pixel art with customizable palettes
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="md:col-span-1 space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ImageIcon className="size-5" /> Upload Image
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div
+                  className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                >
+                  <Upload className="size-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Drag & drop an image here, or click to select
+                  </p>
+                  <Button type="button" variant="outline" size="sm">
+                    Choose File
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Block Size: {blockSize}px</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Slider
+                  value={[blockSize]}
+                  min={1}
+                  max={32}
+                  step={1}
+                  onValueChange={(v) => handleBlockSizeChange(Number(v[0]))}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Zoom: {Math.round(zoom * 100)}%</span>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setZoom((z) => Math.max(0.25, Number((z / 1.25).toFixed(2))))}
+                    >
+                      <ZoomOut className="size-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setZoom((z) => Math.min(8, Number((z * 1.25).toFixed(2))))}
+                    >
+                      <ZoomIn className="size-4" />
+                    </Button>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Slider
+                  value={[zoom] as unknown as number[]}
+                  min={0.25}
+                  max={8}
+                  step={0.05}
+                  onValueChange={(v) => setZoom(Number(v[0]))}
+                />
+                <div className="mt-2 flex gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const el = document.getElementById('viewer-container');
+                      if (!el) return;
+                      zoomFit(el.clientWidth, el.clientHeight);
+                    }}
+                  >
+                    Fit
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setZoom(1)}
+                  >
+                    100%
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="size-5" /> Color Palettes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mb-4">
+                  <span>Colorize with palette</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={colorizeEnabled ? 'secondary' : 'outline'}
+                    onClick={() => setColorizeEnabled((v) => !v)}
+                  >
+                    {colorizeEnabled ? 'On' : 'Off'}
+                  </Button>
+                </div>
+                {colorizeEnabled ? (
+                  <>
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                      <span className="text-xs">Bulk:</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedKeys(PALETTE_ENTRIES.map((e) => String(e.key)))}
+                      >
+                        Select all
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setSelectedKeys(
+                            PALETTE_ENTRIES.filter((e) => !e.isPremium).map((e) => String(e.key))
+                          )
+                        }
+                      >
+                        Only free
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setSelectedKeys(
+                            PALETTE_ENTRIES.filter((e) => e.isPremium).map((e) => String(e.key))
+                          )
+                        }
+                      >
+                        Only premium
+                      </Button>
+                    </div>
+
+                    <div className="grid gap-4">
+                      <div>
+                        <h3 className="font-medium mb-2">Free Colors</h3>
+                        <ScrollArea className="h-28 rounded border p-2">
+                          <div className="grid grid-cols-12 gap-2">
+                            {PALETTE_ENTRIES.filter((e) => !e.isPremium).map((p) => {
+                              const isSelected = selectedKeys.includes(String(p.key));
+                              const label = toReadableName(String(p.key));
+                              return (
+                                <Tooltip key={p.key}>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      aria-label={`Toggle ${label}`}
+                                      aria-pressed={isSelected}
+                                      onClick={() =>
+                                        setSelectedKeys((prev) =>
+                                          prev.includes(String(p.key))
+                                            ? prev.filter((x) => x !== String(p.key))
+                                            : [...prev, String(p.key)]
+                                        )
+                                      }
+                                      className={`h-6 w-6 rounded border ${
+                                        isSelected
+                                          ? 'border-primary'
+                                          : 'border-border opacity-30 hover:opacity-75'
+                                      }`}
+                                      style={{ backgroundColor: p.hex }}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>{label}</TooltipContent>
+                                </Tooltip>
+                              );
+                            })}
+                          </div>
+                        </ScrollArea>
+                      </div>
+                      <div>
+                        <h3 className="font-medium mb-2">Premium Colors</h3>
+                        <ScrollArea className="h-28 rounded border p-2">
+                          <div className="grid grid-cols-12 gap-2">
+                            {PALETTE_ENTRIES.filter((e) => e.isPremium).map((p) => {
+                              const isSelected = selectedKeys.includes(String(p.key));
+                              const label = toReadableName(String(p.key));
+                              return (
+                                <Tooltip key={p.key}>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      aria-label={`Toggle ${label}`}
+                                      aria-pressed={isSelected}
+                                      onClick={() =>
+                                        setSelectedKeys((prev) =>
+                                          prev.includes(String(p.key))
+                                            ? prev.filter((x) => x !== String(p.key))
+                                            : [...prev, String(p.key)]
+                                        )
+                                      }
+                                      className={`h-6 w-6 rounded border ${
+                                        isSelected
+                                          ? 'border-primary'
+                                          : 'border-border opacity-30 hover:opacity-75'
+                                      }`}
+                                      style={{ backgroundColor: p.hex }}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>{label}</TooltipContent>
+                                </Tooltip>
+                              );
+                            })}
+                          </div>
+                        </ScrollArea>
+                      </div>
+                    </div>
+                  </>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <Button
+              type="button"
+              className="w-full"
+              size="lg"
+              disabled={!result || isProcessing}
+              onClick={onDownload}
+            >
+              <Download className="size-4 mr-2" /> Download Pixel Art
+            </Button>
           </div>
-        </section>
+
+          <div className="md:col-span-2">
+            <Card className="h-full">
+              <CardHeader>
+                <CardTitle>Preview</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <section
+                  id="viewer-container"
+                  className="relative overflow-hidden rounded-b-xl"
+                >
+                  <div className="h-[min(70vh,70svh)] md:h-[70vh]">
+                    <PixelViewer
+                      bitmap={result?.bitmap ?? null}
+                      blockSize={blockSize}
+                      onRequestFit={zoomFit}
+                      onZoomChange={setZoom}
+                      showGrid={showGrid}
+                      zoom={zoom}
+                    />
+                  </div>
+                  {!bitmap ? (
+                    <div className="absolute inset-0 grid place-items-center p-8 text-center text-muted-foreground">
+                      <div>
+                        <ImageIcon className="size-16 mx-auto mb-4 opacity-50" />
+                        <p>Upload an image to see the pixel art preview</p>
+                      </div>
+                    </div>
+                  ) : null}
+                </section>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Palette controls moved to the left column */}
       </div>
     </div>
   );

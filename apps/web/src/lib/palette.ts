@@ -62,7 +62,6 @@ export const PALETTE_MAP = {
   darkSlate: { color: '#333941', is_premium: true },
   slate: { color: '#6d758d', is_premium: true },
   lightSlate: { color: '#b3b9d1', is_premium: true },
-  transparent: { color: 'transparent', is_premium: false },
 } as const;
 
 export type PaletteMap = typeof PALETTE_MAP;

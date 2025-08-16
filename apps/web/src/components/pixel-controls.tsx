@@ -46,6 +46,11 @@ export type PixelControlsProps = {
   selectedKeys?: string[];
   onToggleKey?: (k: string) => void;
   onSelectAll?: (premium: boolean | 'all') => void;
+  /**
+   * When false, hides the palette controls section entirely.
+   * Defaults to true to preserve existing behavior for other pages.
+   */
+  showPaletteControls?: boolean;
 };
 
 export function PixelControls(props: PixelControlsProps) {
@@ -62,6 +67,7 @@ export function PixelControls(props: PixelControlsProps) {
     onDownload,
   } = props;
   const colorizeEnabled = props.colorizeEnabled ?? true;
+  const showPaletteControls = props.showPaletteControls ?? true;
 
   const [internalBlockSize, setInternalBlockSize] = useState([blockSize]);
   useEffect(() => {
@@ -172,118 +178,122 @@ export function PixelControls(props: PixelControlsProps) {
         </div>
       </div>
 
-      <Separator />
+      {showPaletteControls ? (
+        <>
+          <Separator />
 
-      <div className="grid gap-1.5">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="colorize">Colorize with palette</Label>
-          <Button
-            onClick={() => props.onToggleColorize?.(!colorizeEnabled)}
-            size="sm"
-            type="button"
-            variant={colorizeEnabled ? 'secondary' : 'outline'}
-          >
-            {colorizeEnabled ? 'On' : 'Off'}
-          </Button>
-        </div>
-        {colorizeEnabled ? (
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground text-xs">Bulk</span>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => props.onSelectAll?.('all')}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  Select all
-                </Button>
-                <Button
-                  onClick={() => props.onSelectAll?.(false)}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  Only free
-                </Button>
-                <Button
-                  onClick={() => props.onSelectAll?.(true)}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  Only premium
-                </Button>
+          <div className="grid gap-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="colorize">Colorize with palette</Label>
+              <Button
+                onClick={() => props.onToggleColorize?.(!colorizeEnabled)}
+                size="sm"
+                type="button"
+                variant={colorizeEnabled ? 'secondary' : 'outline'}
+              >
+                {colorizeEnabled ? 'On' : 'Off'}
+              </Button>
+            </div>
+            {colorizeEnabled ? (
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground text-xs">Bulk</span>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => props.onSelectAll?.('all')}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      Select all
+                    </Button>
+                    <Button
+                      onClick={() => props.onSelectAll?.(false)}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      Only free
+                    </Button>
+                    <Button
+                      onClick={() => props.onSelectAll?.(true)}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      Only premium
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <div className="font-medium text-xs">Free colors</div>
+                  <ScrollArea className="h-28 rounded border p-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      {props.paletteEntries
+                        ?.filter((p) => !p.isPremium)
+                        .map((p) => {
+                          const checked =
+                            props.selectedKeys?.includes(p.key) ?? false;
+                          return (
+                            <label
+                              className="flex cursor-pointer items-center gap-2 text-xs"
+                              htmlFor={`free-${p.key}`}
+                              key={p.key}
+                            >
+                              <Checkbox
+                                checked={checked}
+                                id={`free-${p.key}`}
+                                onCheckedChange={() => props.onToggleKey?.(p.key)}
+                              />
+                              <span
+                                aria-hidden
+                                className="inline-block h-3 w-3 rounded"
+                                style={{ backgroundColor: p.hex }}
+                              />
+                              <span className="truncate">{p.key}</span>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  </ScrollArea>
+                </div>
+                <div className="grid gap-2">
+                  <div className="font-medium text-xs">Premium colors</div>
+                  <ScrollArea className="h-28 rounded border p-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      {props.paletteEntries
+                        ?.filter((p) => p.isPremium)
+                        .map((p) => {
+                          const checked =
+                            props.selectedKeys?.includes(p.key) ?? false;
+                          return (
+                            <label
+                              className="flex cursor-pointer items-center gap-2 text-xs"
+                              htmlFor={`prem-${p.key}`}
+                              key={p.key}
+                            >
+                              <Checkbox
+                                checked={checked}
+                                id={`prem-${p.key}`}
+                                onCheckedChange={() => props.onToggleKey?.(p.key)}
+                              />
+                              <span
+                                aria-hidden
+                                className="inline-block h-3 w-3 rounded"
+                                style={{ backgroundColor: p.hex }}
+                              />
+                              <span className="truncate">{p.key}</span>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  </ScrollArea>
+                </div>
               </div>
-            </div>
-            <div className="grid gap-2">
-              <div className="font-medium text-xs">Free colors</div>
-              <ScrollArea className="h-28 rounded border p-2">
-                <div className="grid grid-cols-2 gap-2">
-                  {props.paletteEntries
-                    ?.filter((p) => !p.isPremium)
-                    .map((p) => {
-                      const checked =
-                        props.selectedKeys?.includes(p.key) ?? false;
-                      return (
-                        <label
-                          className="flex cursor-pointer items-center gap-2 text-xs"
-                          htmlFor={`free-${p.key}`}
-                          key={p.key}
-                        >
-                          <Checkbox
-                            checked={checked}
-                            id={`free-${p.key}`}
-                            onCheckedChange={() => props.onToggleKey?.(p.key)}
-                          />
-                          <span
-                            aria-hidden
-                            className="inline-block h-3 w-3 rounded"
-                            style={{ backgroundColor: p.hex }}
-                          />
-                          <span className="truncate">{p.key}</span>
-                        </label>
-                      );
-                    })}
-                </div>
-              </ScrollArea>
-            </div>
-            <div className="grid gap-2">
-              <div className="font-medium text-xs">Premium colors</div>
-              <ScrollArea className="h-28 rounded border p-2">
-                <div className="grid grid-cols-2 gap-2">
-                  {props.paletteEntries
-                    ?.filter((p) => p.isPremium)
-                    .map((p) => {
-                      const checked =
-                        props.selectedKeys?.includes(p.key) ?? false;
-                      return (
-                        <label
-                          className="flex cursor-pointer items-center gap-2 text-xs"
-                          htmlFor={`prem-${p.key}`}
-                          key={p.key}
-                        >
-                          <Checkbox
-                            checked={checked}
-                            id={`prem-${p.key}`}
-                            onCheckedChange={() => props.onToggleKey?.(p.key)}
-                          />
-                          <span
-                            aria-hidden
-                            className="inline-block h-3 w-3 rounded"
-                            style={{ backgroundColor: p.hex }}
-                          />
-                          <span className="truncate">{p.key}</span>
-                        </label>
-                      );
-                    })}
-                </div>
-              </ScrollArea>
-            </div>
+            ) : null}
           </div>
-        ) : null}
-      </div>
+        </>
+      ) : null}
 
       <Separator />
 
