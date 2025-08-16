@@ -94,6 +94,7 @@ function HomeComponent() {
   const [showGrid, setShowGrid] = useState(false);
   const [colorizeEnabled, setColorizeEnabled] = useState(true);
   const [advancedColorize, setAdvancedColorize] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() =>
     PALETTE_ENTRIES.map((e) => String(e.key))
   );
@@ -409,20 +410,32 @@ function HomeComponent() {
             ) : null}
 
             <Card>
-              <CardHeader>
-                <CardTitle>Advanced</CardTitle>
+              <CardHeader className="flex items-center justify-between">
+                <CardTitle>Advanced settings</CardTitle>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  aria-expanded={showAdvanced}
+                  aria-controls="advanced-settings"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                >
+                  {showAdvanced ? 'Hide' : 'Show'}
+                </Button>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="advanced-colorize-toggle">Perceptual mapping (ΔE00)</Label>
-                  <Switch
-                    id="advanced-colorize-toggle"
-                    checked={advancedColorize}
-                    onCheckedChange={(v) => setAdvancedColorize(Boolean(v))}
-                    aria-label="Toggle perceptual ΔE00 mapping"
-                  />
-                </div>
-              </CardContent>
+              {showAdvanced ? (
+                <CardContent id="advanced-settings">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="advanced-colorize-toggle">Perceptual coloring (ΔE00)</Label>
+                    <Switch
+                      id="advanced-colorize-toggle"
+                      checked={advancedColorize}
+                      onCheckedChange={(v) => setAdvancedColorize(Boolean(v))}
+                      aria-label="Toggle perceptual ^e00 coloring"
+                    />
+                  </div>
+                </CardContent>
+              ) : null}
             </Card>
 
             <Card>
@@ -560,6 +573,8 @@ function HomeComponent() {
               </CardContent>
             </Card>
 
+            
+
             <Button
               type="button"
               className="w-full"
@@ -581,9 +596,10 @@ function HomeComponent() {
                   id="viewer-container"
                   className="relative overflow-hidden rounded-b-xl"
                 >
-                  <div className="h-[min(70vh,70svh)] md:h-[70vh]">
+                  <div className="h-[min(60vh,60svh)] md:h-[60vh]">
                     <PixelViewer
                       bitmap={result?.bitmap ?? null}
+                      meta={result?.meta ?? null}
                       blockSize={blockSize}
                       onRequestFit={zoomFit}
                       onZoomChange={setZoom}

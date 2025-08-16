@@ -14,6 +14,11 @@ export type PixelViewerProps = {
   onRequestFit: (containerW: number, containerH: number) => void;
   showGrid?: boolean;
   blockSize?: number;
+  meta?: {
+    outWidth: number;
+    outHeight: number;
+    totalPixels: number;
+  } | null;
 };
 
 export function PixelViewer({
@@ -23,6 +28,7 @@ export function PixelViewer({
   onRequestFit,
   showGrid = false,
   blockSize = 16,
+  meta = null,
 }: PixelViewerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -163,6 +169,24 @@ export function PixelViewer({
           </div>
         ) : null}
       </div>
+      {meta ? (
+        <div className="pointer-events-none absolute left-3 top-3 rounded-md border bg-background/80 p-2 text-xs shadow-sm backdrop-blur">
+          <div className="grid gap-1">
+            <div className="flex items-center justify-between gap-6">
+              <span>Width</span>
+              <span className="font-medium text-primary">{meta.outWidth}</span>
+            </div>
+            <div className="flex items-center justify-between gap-6">
+              <span>Height</span>
+              <span className="font-medium text-primary">{meta.outHeight}</span>
+            </div>
+            <div className="flex items-center justify-between gap-6">
+              <span>Total pixels</span>
+              <span className="font-medium text-primary">{meta.totalPixels}</span>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
