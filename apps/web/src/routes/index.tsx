@@ -82,6 +82,12 @@ function HomeComponent() {
   );
 
   useEffect(() => {
+    // Using import.meta.url provides the absolute URL of the current module,
+    // which is essential for resolving the relative path '../workers/pixelate.worker.ts'
+    // correctly regardless of where this code is bundled or executed.
+    //
+    // Without import.meta.url, the relative path would be resolved relative to
+    // the document's base URL, which could be incorrect in bundled environments.
     const w = new Worker(
       new URL('../workers/pixelate.worker.ts', import.meta.url),
       { type: 'module' }
@@ -115,8 +121,6 @@ function HomeComponent() {
       w.terminate();
     };
   }, []);
-
-  // Palette is inlined via PALETTE_ENTRIES
 
   const selectedPaletteArray = useMemo(() => {
     const selected = new Set(selectedKeys);
@@ -220,8 +224,6 @@ function HomeComponent() {
     }
     workerRef.current?.postMessage({ type: 'generateBlob', jobId });
   }
-
-  // moved above to satisfy ordering
 
   // Re-run when palette settings change
   useEffect(() => {
