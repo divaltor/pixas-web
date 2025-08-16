@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PixelControls } from '@/components/pixel-controls';
 import { PixelViewer } from '@/components/pixel-viewer';
 import { decodeFileToBitmap } from '@/lib/image';
+import { PALETTE_ENTRIES } from '@/lib/palette';
 import type {
   PixelateBlobMessage,
   PixelateIncomingMessage,
@@ -76,11 +77,9 @@ function HomeComponent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
   const [colorizeEnabled, setColorizeEnabled] = useState(true);
-  const [paletteEntries, setPaletteEntries] = useState<
-    Array<{ key: string; hex: string; isPremium: boolean }>
-  >([]);
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
-  const paletteAbortRef = useRef(false);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>(() =>
+    PALETTE_ENTRIES.map((e) => String(e.key))
+  );
 
   useEffect(() => {
     const w = new Worker(
@@ -117,42 +116,13 @@ function HomeComponent() {
     };
   }, []);
 
-  // Load palette once
-  useEffect(() => {
-    paletteAbortRef.current = false;
-    async function load() {
-      try {
-        const res = await fetch('/palette.json');
-        const json = (await res.json()) as Record<
-          string,
-          { color: string; is_premium: boolean }
-        >;
-        if (paletteAbortRef.current) {
-          return;
-        }
-        const entries = Object.entries(json).map(([key, v]) => ({
-          key,
-          hex: v.color,
-          isPremium: v.is_premium,
-        }));
-        setPaletteEntries(entries);
-        setSelectedKeys(entries.map((e) => e.key)); // default all selected
-      } catch (_err) {
-        /* noop */
-      }
-    }
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    load();
-    return () => {
-      paletteAbortRef.current = true;
-    };
-  }, []);
+  // Palette is inlined via PALETTE_ENTRIES
 
   const selectedPaletteArray = useMemo(() => {
     const selected = new Set(selectedKeys);
     const out: number[] = [];
-    for (const e of paletteEntries) {
-      if (!selected.has(e.key)) {
+    for (const e of PALETTE_ENTRIES) {
+      if (!selected.has(String(e.key))) {
         continue;
       }
       const rgba = hexToRgbaComponents(e.hex);
@@ -164,7 +134,7 @@ function HomeComponent() {
       return out.slice(0, out.length - (out.length % RGBA_STRIDE));
     }
     return out;
-  }, [paletteEntries, selectedKeys]);
+  }, [selectedKeys]);
 
   const startProcess = useCallback(
     (newBlockSize: number, source: ImageBitmap, includeBitmap: boolean) => {
@@ -275,13 +245,13 @@ function HomeComponent() {
             onFileSelected={handleFile}
             onSelectAll={(premium) => {
               if (premium === 'all') {
-                setSelectedKeys(paletteEntries.map((e) => e.key));
+                setSelectedKeys(PALETTE_ENTRIES.map((e) => String(e.key)));
                 return;
               }
               setSelectedKeys(
-                paletteEntries
-                  .filter((e) => e.isPremium === premium)
-                  .map((e) => e.key)
+                PALETTE_ENTRIES.filter((e) => e.isPremium === premium).map(
+                  (e) => String(e.key)
+                )
               );
             }}
             onToggleColorize={setColorizeEnabled}
@@ -302,7 +272,7 @@ function HomeComponent() {
               }
               zoomFit(el.clientWidth, el.clientHeight);
             }}
-            paletteEntries={paletteEntries}
+            paletteEntries={PALETTE_ENTRIES}
             selectedKeys={selectedKeys}
             zoom={zoom}
           />

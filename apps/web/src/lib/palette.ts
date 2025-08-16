@@ -1,0 +1,82 @@
+export const PALETTE_MAP = {
+  black: { color: '#000000', is_premium: false },
+  darkGray: { color: '#3c3c3c', is_premium: false },
+  gray: { color: '#787878', is_premium: false },
+  mediumGray: { color: '#aaaaaa', is_premium: true },
+  lightGray: { color: '#d2d2d2', is_premium: false },
+  white: { color: '#ffffff', is_premium: false },
+  deepRed: { color: '#600018', is_premium: false },
+  darkRed: { color: '#a50e1e', is_premium: true },
+  red: { color: '#ed1c24', is_premium: false },
+  lightRed: { color: '#fa8072', is_premium: true },
+  darkOrange: { color: '#e45c1a', is_premium: true },
+  orange: { color: '#ff7f27', is_premium: false },
+  gold: { color: '#f6aa09', is_premium: false },
+  yellow: { color: '#f9dd3b', is_premium: false },
+  lightYellow: { color: '#fffabc', is_premium: false },
+  darkGoldenrod: { color: '#9c8431', is_premium: true },
+  goldenrod: { color: '#c5ad31', is_premium: true },
+  lightGoldenrod: { color: '#e8d45f', is_premium: true },
+  darkOlive: { color: '#4a6b3a', is_premium: true },
+  olive: { color: '#5a944a', is_premium: true },
+  lightOlive: { color: '#84c573', is_premium: true },
+  darkGreen: { color: '#0eb968', is_premium: false },
+  green: { color: '#13e67b', is_premium: false },
+  lightGreen: { color: '#87ff5e', is_premium: false },
+  darkTeal: { color: '#0c816e', is_premium: false },
+  teal: { color: '#10aea6', is_premium: false },
+  lightTeal: { color: '#13e1be', is_premium: false },
+  darkCyan: { color: '#0f799f', is_premium: true },
+  cyan: { color: '#60f7f2', is_premium: false },
+  lightCyan: { color: '#bbfaf2', is_premium: true },
+  darkBlue: { color: '#28509e', is_premium: false },
+  blue: { color: '#4093e4', is_premium: false },
+  lightBlue: { color: '#7dc7ff', is_premium: true },
+  darkIndigo: { color: '#4d31b8', is_premium: true },
+  indigo: { color: '#6b50f6', is_premium: false },
+  lightIndigo: { color: '#99b1fb', is_premium: false },
+  darkSlateBlue: { color: '#4a4284', is_premium: true },
+  slateBlue: { color: '#7a71c4', is_premium: true },
+  lightSlateBlue: { color: '#b5aef1', is_premium: true },
+  darkPurple: { color: '#780c99', is_premium: false },
+  purple: { color: '#aa38b9', is_premium: false },
+  lightPurple: { color: '#e09ff9', is_premium: false },
+  darkPink: { color: '#cb007a', is_premium: false },
+  pink: { color: '#ec1f80', is_premium: false },
+  lightPink: { color: '#f38da9', is_premium: false },
+  darkPeach: { color: '#9b5249', is_premium: true },
+  peach: { color: '#d18078', is_premium: true },
+  lightPeach: { color: '#fab6a4', is_premium: true },
+  darkBrown: { color: '#684634', is_premium: false },
+  brown: { color: '#95682a', is_premium: false },
+  lightBrown: { color: '#dba463', is_premium: true },
+  darkTan: { color: '#7b6352', is_premium: true },
+  tan: { color: '#9c846b', is_premium: true },
+  lightTan: { color: '#d6b594', is_premium: true },
+  darkBeige: { color: '#d18051', is_premium: true },
+  beige: { color: '#f8b277', is_premium: false },
+  lightBeige: { color: '#ffc5a5', is_premium: true },
+  darkStone: { color: '#6d643f', is_premium: true },
+  stone: { color: '#948c6b', is_premium: true },
+  lightStone: { color: '#cdc59e', is_premium: true },
+  darkSlate: { color: '#333941', is_premium: true },
+  slate: { color: '#6d758d', is_premium: true },
+  lightSlate: { color: '#b3b9d1', is_premium: true },
+  transparent: { color: 'transparent', is_premium: false },
+} as const;
+
+export type PaletteMap = typeof PALETTE_MAP;
+
+export type PaletteEntry = {
+  key: keyof PaletteMap extends string ? keyof PaletteMap : string;
+  hex: string;
+  isPremium: boolean;
+};
+
+export const PALETTE_ENTRIES: PaletteEntry[] = Object.entries(PALETTE_MAP).map(
+  ([key, value]) => ({
+    key: key as PaletteEntry['key'],
+    hex: value.color,
+    isPremium: value.is_premium,
+  })
+);
