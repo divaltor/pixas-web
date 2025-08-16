@@ -4,6 +4,9 @@ import { PixelViewer } from '@/components/pixel-viewer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { decodeFileToBitmap } from '@/lib/image';
 import { PALETTE_ENTRIES } from '@/lib/palette';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -27,6 +30,8 @@ const HEX_SIX_LEN = 6;
 const HEX_BYTE_SLICE_START = 0;
 const HEX_BYTE_SLICE_MIDDLE = 2;
 const HEX_BYTE_SLICE_END = 4;
+
+const GRID_TOGGLE_VISIBLE = false;
 
 function hexToRgbaComponents(
   hex: string
@@ -86,8 +91,9 @@ function HomeComponent() {
     };
   } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const showGrid = true;
+  const [showGrid, setShowGrid] = useState(false);
   const [colorizeEnabled, setColorizeEnabled] = useState(true);
+  const [advancedColorize, setAdvancedColorize] = useState(true);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() =>
     PALETTE_ENTRIES.map((e) => String(e.key))
   );
@@ -163,6 +169,7 @@ function HomeComponent() {
             jobId: number;
             blockSize: number;
             colorizeEnabled?: boolean;
+            advancedColorize?: boolean;
             palette?: number[];
           }
         | {
@@ -171,6 +178,7 @@ function HomeComponent() {
             blockSize: number;
             bitmap: ImageBitmap;
             colorizeEnabled?: boolean;
+            advancedColorize?: boolean;
             palette?: number[];
           };
       const paletteArray = selectedPaletteArray;
@@ -178,6 +186,7 @@ function HomeComponent() {
         colorizeEnabled && paletteArray.length >= RGBA_STRIDE;
       const baseExtra = {
         colorizeEnabled: enableColorize,
+        advancedColorize,
         palette: paletteArray,
       } as const;
       const baseMsg: ProcessMessage = includeBitmap
@@ -196,7 +205,7 @@ function HomeComponent() {
           };
       workerRef.current?.postMessage(baseMsg);
     },
-    [colorizeEnabled, selectedPaletteArray]
+    [colorizeEnabled, selectedPaletteArray, advancedColorize]
   );
 
   async function handleFile(file: File) {
@@ -269,17 +278,11 @@ function HomeComponent() {
     if (bitmap) {
       startProcess(blockSize, bitmap, false);
     }
-  }, [bitmap, blockSize, selectedKeys, startProcess]);
+  }, [bitmap, blockSize, selectedKeys, advancedColorize, startProcess]);
 
   return (
     <div className="container mx-auto h-full px-4 py-6">
       <div className="space-y-6">
-        <div className="text-center space-y-1">
-          <h1 className="text-3xl font-bold">Pixel Art Converter</h1>
-          <p className="text-muted-foreground text-sm">
-            Transform your images into pixel art with customizable palettes
-          </p>
-        </div>
 
         <div className="grid gap-6 md:grid-cols-3">
           <div className="md:col-span-1 space-y-4">
@@ -382,6 +385,42 @@ function HomeComponent() {
                   >
                     100%
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {GRID_TOGGLE_VISIBLE ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Grid</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="show-grid-toggle">Show grid</Label>
+                    <Checkbox
+                      id="show-grid-toggle"
+                      checked={showGrid}
+                      onCheckedChange={setShowGrid}
+                      aria-label="Toggle grid visibility"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Advanced</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="advanced-colorize-toggle">Perceptual mapping (ΔE00)</Label>
+                  <Switch
+                    id="advanced-colorize-toggle"
+                    checked={advancedColorize}
+                    onCheckedChange={(v) => setAdvancedColorize(Boolean(v))}
+                    aria-label="Toggle perceptual ΔE00 mapping"
+                  />
                 </div>
               </CardContent>
             </Card>
